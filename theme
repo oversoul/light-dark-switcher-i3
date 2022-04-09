@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+dir="$HOME/.config/dotfiles"
+output="$dir/output"
+mkdir -p $output
+
+typeset -A colors
+
+generate_links() {
+  echo "Creating links"
+  ln -s -f $output/rofi.colors $HOME/.config/rofi/colors.rasi
+  ln -s -f $output/kitty-theme.conf $HOME/.config/kitty/theme.conf
+  ln -s -f $output/i3colors $HOME/.config/i3/colors
+  ln -s -f $output/i3bar $HOME/.config/i3/barcolors
+  ln -s -f $output/xsettingsd $HOME/.xsettingsd
+}
+
+get_light_colors() {
+  echo "generating light theme..."
+
+  while IFS=$':= \t' read key value; do
+    [[ $key = [#!]* ]] || [[ $key = "" ]] || colors[$key]=$value
+  done < $dir/themes/light.conf
+}
+
+get_dark_colors() {
+  echo "generating dark theme..."
+
+  while IFS=$':= \t' read key value; do
+    [[ $key = [#!]* ]] || [[ $key = "" ]] || colors[$key]=$value
+  done < $dir/themes/dark.conf
+}
+
+generate_theme() {
+  for k in "${!colors[@]}"; do 
+    echo 's/\$'"$k$/${colors[$k]}/g"
+  done | sed -f - $dir/templates/kitty.theme > $output/kitty-theme.conf
+  echo "kitty theme generated..."
+
+  for k in "${!colors[@]}"; do 
+    echo 's/\$'"$k/${colors[$k]}/g"
+  done | sed -f - $dir/templates/i3.colors > $output/i3colors
+  echo "i3 theme generated..."
+
+  for k in "${!colors[@]}"; do 
+    echo 's/\$'"$k/${colors[$k]}/g"
+  done | sed -f - $dir/templates/i3.bar > $output/i3bar
+  echo "i3 bar theme generated..."
+
+  for k in "${!colors[@]}"; do 
+    echo 's/\$'"$k;/${colors[$k]};/;"
+  done | sed -f - $dir/templates/rofi.colors > $output/rofi.colors
+  echo "rofi theme generated..."
+}
+
+generate_light_theme() {
+  get_light_colors
+  generate_theme
+  # change gtk
+  theme="Ant"
+  cat $dir/templates/xsettingsd.conf | sed s/theme_name/$theme/ > $output/xsettingsd
+  generate_links
+}
+
+generate_dark_theme() {
+  get_dark_colors
+  generate_theme
+  # change gtk
+  theme="Vestica"
+  cat $dir/templates/xsettingsd.conf | sed s/theme_name/$theme/ > $output/xsettingsd
+  generate_links
+}
+
+if [ "$1" == "light" ];then
+  generate_light_theme
+else
+  generate_dark_theme
+fi
+
+killall -HUP xsettingsd
+kitty @ set-colors -a -c $HOME/.config/kitty/kitty.conf
+i3-msg reload > /dev/null

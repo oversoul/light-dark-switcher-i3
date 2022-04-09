@@ -1,0 +1,17 @@
+bar {
+  # status_command i3status
+  status_command SCRIPT_DIR=~/.config/i3blocks/commands/ i3blocks
+  position top
+  colors {
+    background  $background
+    statusline  $foreground
+    separator   $cursor
+    # class             border        backgr.       text
+    focused_workspace   $color2       $color2       $background
+    # active on other screen?
+    active_workspace    $background   $background   $foreground
+    inactive_workspace  $background   $background   $foreground
+    urgent_workspace    $color10      $color10      $foreground
+    binding_mode        $color2       $color1       $foreground
+  }
+}
